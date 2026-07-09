@@ -9,8 +9,30 @@ import { JSONDatabase } from "./db";
 import { sendReplyEmail } from "./mailer";
 import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+let resolvedFilename = "";
+let resolvedDirname = "";
+
+try {
+  if (typeof __filename !== "undefined" && __filename) {
+    resolvedFilename = __filename;
+  } else if (typeof import.meta !== "undefined" && import.meta && import.meta.url) {
+    resolvedFilename = fileURLToPath(import.meta.url);
+  }
+} catch (e) {
+  // Safe fallback if url conversion fails
+}
+
+try {
+  if (typeof __dirname !== "undefined" && __dirname) {
+    resolvedDirname = __dirname;
+  } else if (resolvedFilename) {
+    resolvedDirname = path.dirname(resolvedFilename);
+  } else {
+    resolvedDirname = process.cwd();
+  }
+} catch (e) {
+  resolvedDirname = process.cwd();
+}
 
 dotenv.config();
 

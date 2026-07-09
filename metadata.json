@@ -1,0 +1,6 @@
+{
+  "name": "Raviraj Chauhan Portfolio",
+  "description": "A 3D animated full-stack developer portfolio for Raviraj Chauhan with interactive particles, a scroll-linked journey timeline, projects showcase, skills cloud, and an AI Recruiter Chatbot assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

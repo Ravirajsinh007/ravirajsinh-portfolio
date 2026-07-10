@@ -9,6 +9,7 @@ import { JSONDatabase } from "./db";
 import { sendReplyEmail } from "./mailer";
 import { fileURLToPath } from "url";
 
+// Safe ES Module/CommonJS path resolution
 let resolvedFilename = "";
 let resolvedDirname = "";
 
@@ -19,7 +20,7 @@ try {
     resolvedFilename = fileURLToPath(import.meta.url);
   }
 } catch (e) {
-  // Safe fallback if url conversion fails
+  // Safe fallback
 }
 
 try {
@@ -55,6 +56,33 @@ function getGeminiClient(): GoogleGenAI {
     });
   }
   return aiClient;
+}
+
+// Robust retry wrapper with exponential backoff for handling transient Google Gemini API 503/429 errors
+async function generateWithRetry<T>(fn: () => Promise<T>, retries = 3, delayMs = 1000): Promise<T> {
+  try {
+    return await fn();
+  } catch (err: any) {
+    const status = err.status || (err.error && err.error.code);
+    const message = err.message || (err.error && err.error.message) || "";
+    
+    const isRetriable = 
+      status === 503 || 
+      status === 429 || 
+      message.includes("503") || 
+      message.includes("UNAVAILABLE") || 
+      message.includes("high demand") || 
+      message.includes("overloaded") || 
+      message.includes("limit") || 
+      message.includes("temporary");
+    
+    if (isRetriable && retries > 0) {
+      console.warn(`[Gemini API] Transient error encountered (Status: ${status}, Msg: ${message}). Retrying in ${delayMs}ms... (${retries} retries left)`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      return generateWithRetry(fn, retries - 1, delayMs * 1.5); // 1.5x exponential backoff multiplier
+    }
+    throw err;
+  }
 }
 
 const RESUME_CONTEXT = `
@@ -113,9 +141,72 @@ Guidelines for your answers:
 - If asked about salary or availability, mention he is open to internships, full-time recruiter chats, and project collaborations.
 `;
 
+function generateFallbackResponse(query: string): string {
+  const q = query.toLowerCase();
+  
+  if (q.includes("hi") || q.includes("hello") || q.includes("hey") || q.includes("greet") || q.includes("morning") || q.includes("afternoon")) {
+    return "Hello! I am Raviraj's AI Recruiter Assistant. I can tell you about his academic journey, core skills, projects, and achievements. What would you like to know today?";
+  }
+  
+  if (q.includes("project") || q.includes("edutrack") || q.includes("ecommerce") || q.includes("portfolio") || q.includes("lms") || q.includes("app")) {
+    return `Raviraj has developed several highly functional projects:
+1. **EduTrack (2025)**: A role-based Student Assignment & Learning Management Portal built using **Python, Django REST Framework, AngularJS, SQLite3, and JWT Authentication**. It features separating student and instructor dashboards, course creation, assignment tracking, grading, and a normalized relational database.
+2. **E-Commerce Platform (2023)**: A Home Decor Store powered by **WordPress, WooCommerce, and Custom CSS/HTML**. Includes a mobile-optimized 'Watch & Shop' video reel.
+3. **Production Management System (2024)**: Built with **PHP and MySQL**, featuring visual dashboards for yearly/monthly/weekly production metrics with secure CRUD operations.`;
+  }
+  
+  if (q.includes("skill") || q.includes("languages") || q.includes("database") || q.includes("tech") || q.includes("frontend") || q.includes("backend") || q.includes("stack") || q.includes("toolkit")) {
+    return `Raviraj's technical toolkit comprises:
+- **Programming Languages**: Python, JavaScript, Java, PHP, C/C++
+- **Frontend Architecture**: AngularJS, HTML5, CSS3, Tailwind CSS, Bootstrap (with exposure to modern React.js)
+- **Backend Architecture**: Django, Django REST Framework, REST APIs, JWT, RBAC, Node.js, Express.js
+- **Database Management**: MySQL, MongoDB, SQLite3, MS SQL Server
+- **Developer Tools**: Git/GitHub, Postman, Visual Studio, WAMP`;
+  }
+  
+  if (q.includes("education") || q.includes("college") || q.includes("university") || q.includes("mca") || q.includes("bca") || q.includes("gpa") || q.includes("academic") || q.includes("charusat") || q.includes("semcom")) {
+    return `Here is a summary of Raviraj's academic background:
+- **Master of Computer Application (MCA)**: CMPICA, CHARUSAT, Anand | July 2025 – Present | Current CGPA: **7.7**
+- **Bachelor of Computer Application (BCA)**: SEMCOM, CVMU, Anand | July 2022 – April 2025 | Graduated with **9.68 CGPA** and academic excellence (awarded the Scroll of Honor).
+- **12th Higher Secondary (Science)**: Shree Sahjanand High School, Botad | June 2021 – March 2022 | **97.55 percentile**.`;
+  }
+  
+  if (q.includes("contact") || q.includes("email") || q.includes("phone") || q.includes("linkedin") || q.includes("github") || q.includes("reach") || q.includes("address") || q.includes("location") || q.includes("live") || q.includes("call")) {
+    return `You can reach Raviraj Chauhan directly through:
+- **Email**: ravirajchauhan219@gmail.com
+- **Phone**: +91 7984887716
+- **Location**: Botad, Gujarat, India
+- **LinkedIn**: [LinkedIn Profile](https://linkedin.com)
+- **GitHub**: [GitHub Profile](https://github.com)
+
+Feel free to send a message using the Contact section on this page! It will directly register in his dashboard.`;
+  }
+
+  if (q.includes("experience") || q.includes("job") || q.includes("work") || q.includes("internship") || q.includes("hiring") || q.includes("hire")) {
+    return `Raviraj is currently pursuing his MCA at CHARUSAT and is enthusiastically looking for full-time full-stack developer roles or internship opportunities. He is fully open to recruiters, interview invitations, and project collaborations. He is strong in building secure REST APIs, designing clean relational schemas, and frontend-backend synchronization.`;
+  }
+
+  if (q.includes("achieve") || q.includes("cert") || q.includes("award") || q.includes("honor") || q.includes("hackathon") || q.includes("codemanthan")) {
+    return `Raviraj's notable credentials include:
+- **Scroll of Honor** from SEMCOM for outstanding academic & leadership achievements.
+- **CODEMANTHAN 1.0 Hackathon** participant where he developed innovative custom solutions under tight deadlines.
+- **IBM Professional Certification** in *Django Application Development with SQL and Databases*.
+- **University of Michigan Certifications** in *Python Data Structures* and *Python Basics*.`;
+  }
+
+  return `I am Raviraj's recruiter assistant. I can answer questions about his:
+- 🎓 **Education** (MCA at CHARUSAT, BCA at SEMCOM)
+- 💻 **Tech Stack** (Django, Python, AngularJS, MySQL, etc.)
+- 🚀 **Projects** (EduTrack, E-Commerce, Production Management System)
+- 🏆 **Achievements** (9.68 BCA CGPA, Scroll of Honor, IBM certifications)
+- 📞 **Contact details** (Email, Location, LinkedIn)
+
+Please feel free to ask about any of these topics! *(Note: The live generative assistant mode is currently offline due to an invalid or unconfigured Gemini API key, so I am answering using my built-in index of his resume details)*`;
+}
+
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   app.use(express.json({ limit: "25mb" }));
   app.use(express.urlencoded({ limit: "25mb", extended: true }));
@@ -130,6 +221,84 @@ async function startServer() {
   // API Health check
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", time: new Date().toISOString() });
+  });
+
+  // Detailed Live System Diagnostics check
+  app.get("/api/status-check", (req, res) => {
+    try {
+      const dbPath = path.join(process.cwd(), "database.json");
+      let dbSize = 0;
+      let dbRecordsCount = 0;
+
+      try {
+        if (fs.existsSync(dbPath)) {
+          const stats = fs.statSync(dbPath);
+          dbSize = stats.size;
+        }
+        // Count database records dynamically
+        const projectsCount = JSONDatabase.getProjects().length;
+        const skillsCount = JSONDatabase.getSkills().length;
+        const certsCount = JSONDatabase.getCertifications().length;
+        const msgsCount = JSONDatabase.getMessages().length;
+        dbRecordsCount = projectsCount + skillsCount + certsCount + msgsCount;
+      } catch (dbErr) {
+        console.error("Error evaluating database status:", dbErr);
+      }
+
+      // Evaluate Mailer Carrier configuration
+      const hasResendConfig = !!process.env.RESEND_API_KEY;
+      const hasSmtpConfig = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+      
+      let mailerCarrier = "Ethereal Sandbox SMTP";
+      if (hasResendConfig) {
+        mailerCarrier = "Resend API Service";
+      } else if (hasSmtpConfig) {
+        mailerCarrier = "Production SMTP";
+      }
+
+      // Evaluate Gemini configurations
+      const hasGeminiKey = !!process.env.GEMINI_API_KEY;
+
+      res.json({
+        ok: true,
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        services: {
+          api: {
+            status: "operational",
+            name: "Portfolio Node/Express REST Gateway",
+            version: "2.5.2",
+            host: req.headers.host || "local"
+          },
+          database: {
+            status: "operational",
+            name: "JSONDatabase Dynamic Storage Engine",
+            sizeBytes: dbSize,
+            recordsCount: dbRecordsCount,
+            file: "database.json"
+          },
+          gemini: {
+            status: hasGeminiKey ? "operational" : "degraded",
+            name: "Google Gemini Core AI model",
+            model: "gemini-2.5-flash",
+            keyConfigured: hasGeminiKey,
+            mode: "Server-side JSON Proxy"
+          },
+          mailer: {
+            status: "operational",
+            name: hasResendConfig ? "Resend Mailer Gateway" : "Nodemailer Gateway Engine",
+            carrier: mailerCarrier,
+            secure: hasResendConfig ? true : process.env.SMTP_PORT === "465"
+          }
+        }
+      });
+    } catch (err: any) {
+      res.status(500).json({
+        ok: false,
+        error: err.message || "Diagnostics failed"
+      });
+    }
   });
 
   // Admin JWT secret & password configuration
@@ -447,25 +616,80 @@ async function startServer() {
     }
   });
 
+  // Helper function to fetch from Grok with automatic model candidates fallback
+  async function generateWithGrok(messages: any[], temperature = 0.7) {
+    const grokKey = process.env.GROK_API_KEY || process.env.XAI_API_KEY;
+    if (!grokKey) {
+      throw new Error("No Grok API key found.");
+    }
+
+    // Try standard candidate models in order of best results and widest availability
+    const candidates = [];
+    if (process.env.GROK_MODEL) {
+      candidates.push(process.env.GROK_MODEL);
+    }
+    candidates.push("grok-2");
+    candidates.push("grok-beta");
+    candidates.push("grok-2-latest");
+    candidates.push("grok-2-1212");
+
+    let lastError: any = null;
+
+    for (const model of candidates) {
+      try {
+        console.log(`[Grok API] Attempting response generation using model: "${model}"`);
+        const response = await fetch("https://api.x.ai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${grokKey}`
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            temperature,
+          })
+        });
+
+        if (response.ok) {
+          const data: any = await response.json();
+          const content = data.choices?.[0]?.message?.content;
+          if (content) {
+            console.log(`[Grok API] Successfully generated response using model: "${model}"`);
+            return { content, modelUsed: model };
+          }
+        } else {
+          const errText = await response.text();
+          console.warn(`[Grok API] Model "${model}" failed with status ${response.status}: ${errText}`);
+          
+          // If the model is not found, we try the next candidate
+          if (errText.includes("Model not found") || errText.includes("invalid-argument") || response.status === 400) {
+            lastError = new Error(`Grok API error: ${response.status} - ${errText}`);
+            continue;
+          }
+          // For auth or other critical errors, throw immediately to avoid wasting requests
+          throw new Error(`Grok API error: ${response.status} - ${errText}`);
+        }
+      } catch (err: any) {
+        console.error(`[Grok API] Error with model "${model}":`, err.message || err);
+        lastError = err;
+      }
+    }
+
+    throw lastError || new Error("Failed to generate response with any available Grok models.");
+  }
+
   // Dynamic AI reply drafting
   app.post("/api/admin/messages/:id/draft", authenticateAdmin, async (req, res) => {
     try {
       const messages = JSONDatabase.getMessages();
       const targetMsg = messages.find(m => m.id === req.params.id);
       if (!targetMsg) {
-        res.status(404).json({ error: "Message not found." });
+        res.status(404).json({ error: "Message on database not found." });
         return;
       }
 
-      // Check for Gemini API key
-      if (!process.env.GEMINI_API_KEY) {
-        res.json({
-          draft: `Hi ${targetMsg.name},\n\nThank you for reaching out! I appreciate your message: "${targetMsg.message.slice(0, 40)}...". I will get back to you shortly.\n\nBest regards,\nRaviraj Chauhan\n(AI Assistant: Setup your GEMINI_API_KEY to draft ultra-personalized responses)`
-        });
-        return;
-      }
-
-      const client = getGeminiClient();
+      const grokKey = process.env.GROK_API_KEY || process.env.XAI_API_KEY;
       const promptText = `
 System Context: ${RESUME_CONTEXT}
 
@@ -481,33 +705,91 @@ Please draft a professional, warm, and tailored email reply on behalf of Raviraj
 - Start directly with the email greeting, e.g., "Hi [Name]," and end with standard professional signature block. Do not include subject lines or extra formatting.
 `;
 
-      const response = await client.models.generateContent({
+      // 1. Try Grok API if key is present
+      if (grokKey) {
+        try {
+          const grokMessages = [
+            { role: "system", content: "You are an assistant drafting email replies on behalf of Raviraj Chauhan." },
+            { role: "user", content: promptText }
+          ];
+          const result = await generateWithGrok(grokMessages, 0.7);
+          res.json({ success: true, draft: result.content });
+          return;
+        } catch (grokErr: any) {
+          console.error("Grok error in drafting, attempting Gemini fallback:", grokErr.message || grokErr);
+        }
+      }
+
+      // 2. Fallback to Gemini if key is present
+      if (!process.env.GEMINI_API_KEY) {
+        res.json({
+          draft: `Hi ${targetMsg.name},\n\nThank you for reaching out! I appreciate your message: "${targetMsg.message.slice(0, 40)}...". I will get back to you shortly.\n\nBest regards,\nRaviraj Chauhan\n(AI Assistant: Setup your GROK_API_KEY or GEMINI_API_KEY to draft ultra-personalized responses)`
+        });
+        return;
+      }
+
+      const client = getGeminiClient();
+      const response = await generateWithRetry(() => client.models.generateContent({
         model: "gemini-3.5-flash",
         contents: promptText,
-      });
+      }));
 
       const draft = response.text || "Failed to generate AI draft. Please compose your reply manually.";
       res.json({ success: true, draft });
     } catch (err: any) {
       console.error("Gemini API Error in /api/admin/messages/:id/draft:", err);
-      res.status(500).json({ error: err.message || "An error occurred while generating reply draft" });
+      // Fallback draft generation
+      const targetMsg = JSONDatabase.getMessages().find(m => m.id === req.params.id);
+      const senderName = targetMsg ? targetMsg.name : "there";
+      const userMessageExcerpt = targetMsg ? `"${targetMsg.message.slice(0, 50)}..."` : "your message";
+      const fallbackDraft = `Hi ${senderName},\n\nThank you so much for reaching out to me! I appreciate your message regarding ${userMessageExcerpt}.\n\nI am very interested in your inquiry and would love to discuss this further. Please let me know a convenient time for us to connect, or feel free to email me directly at ravirajchauhan219@gmail.com.\n\nBest regards,\nRaviraj Chauhan\n\n*(Note: This standard response was drafted automatically as the live Gemini API key is currently experiencing issues)*`;
+      res.json({ success: true, draft: fallbackDraft });
     }
   });
 
   // AI Recruiter Chatbot API
   app.post("/api/chat", async (req, res) => {
+    const { message, history } = req.body;
     try {
-      const { message, history } = req.body;
       if (!message) {
         res.status(400).json({ error: "Message is required" });
         return;
       }
 
-      // Check for Gemini API key
+      const grokKey = process.env.GROK_API_KEY || process.env.XAI_API_KEY;
+
+      // 1. If Grok key is specified, route directly to xAI endpoint
+      if (grokKey) {
+        try {
+          const chatHistory = history || [];
+          const messages = [
+            {
+              role: "system",
+              content: RESUME_CONTEXT
+            },
+            ...chatHistory.map((h: any) => ({
+              role: h.sender === "user" ? "user" : "assistant",
+              content: h.text,
+            })),
+            {
+              role: "user",
+              content: message,
+            }
+          ];
+
+          const result = await generateWithGrok(messages, 0.7);
+          res.json({ reply: result.content, provider: `Grok (${result.modelUsed})` });
+          return;
+        } catch (grokErr: any) {
+          console.error("Grok chatbot error, attempting Gemini fallback:", grokErr.message || grokErr);
+        }
+      }
+
+      // 2. Otherwise use Google Gemini API
       if (!process.env.GEMINI_API_KEY) {
-        res.json({
-          reply: "Hello! I am Raviraj's AI Recruiter Assistant. I'd love to tell you all about his projects and skills, but my Gemini API Key is currently not configured in the Secrets panel. Please provide a GEMINI_API_KEY in Settings to enable my live intelligence! In the meantime, you can explore the portfolio below which contains all of Raviraj's verified resume data.",
-        });
+        // Fallback gracefully immediately if key is missing
+        const fallbackReply = generateFallbackResponse(message);
+        res.json({ reply: fallbackReply, isFallback: true, provider: "Local AI" });
         return;
       }
 
@@ -534,16 +816,18 @@ Please draft a professional, warm, and tailored email reply on behalf of Raviraj
         }
       ];
 
-      const response = await client.models.generateContent({
+      const response = await generateWithRetry(() => client.models.generateContent({
         model: "gemini-3.5-flash",
         contents,
-      });
+      }));
 
       const reply = response.text || "I apologize, but I could not formulate a response at the moment. Please feel free to ask another question!";
-      res.json({ reply });
+      res.json({ reply, provider: "Gemini" });
     } catch (err: any) {
-      console.error("Gemini API Error in /api/chat:", err);
-      res.status(500).json({ error: err.message || "An error occurred while generating response" });
+      console.error("AI Recruiter Chatbot error:", err);
+      // Fallback gracefully to local keyword-based resume assistant to ensure 100% availability
+      const fallbackReply = generateFallbackResponse(message);
+      res.json({ reply: fallbackReply, isFallback: true, provider: "Local AI" });
     }
   });
 

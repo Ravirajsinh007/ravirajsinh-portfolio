@@ -19,6 +19,7 @@ const QUICK_QUESTIONS = [
 
 export default function FloatingChatbot() {
   const [isOpen, setIsOpen] = useState(false);
+  const [provider, setProvider] = useState<string>("Gemini"); // <-- Dynamic provider state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: "bot-init",

@@ -360,7 +360,18 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
       const data = await res.json();
       if (res.ok && data.reply) {
         setReplyTexts(prev => ({ ...prev, [messageId]: "" }));
-        showStatus("Reply dispatched and saved locally.");
+        
+        if (data.emailSent) {
+          if (data.previewUrl) {
+            showStatus(`Reply saved! Sandbox test email ready at: ${data.previewUrl}`);
+            window.open(data.previewUrl, "_blank");
+          } else {
+            showStatus("Reply saved & emailed successfully to recipient via Resend API!");
+          }
+        } else {
+          showStatus("Reply saved locally, but email dispatch failed. Please verify credentials.", true);
+        }
+        
         loadAllAdminData();
       } else {
         showStatus(data.error || "Failed to transmit reply.", true);
@@ -599,12 +610,12 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
       {/* Top Banner Header */}
       <div id="admin_banner_header" className="border-b border-slate-900/80 bg-slate-950/80 px-6 py-4 sticky top-0 z-40 backdrop-blur flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center text-white font-mono font-bold shadow-md shadow-indigo-950/20">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center text-white font-sans font-bold shadow-md shadow-indigo-950/20">
             R
           </div>
           <div>
-            <h1 className="text-sm font-bold text-slate-100 uppercase tracking-widest font-mono">Portfolio Control Center</h1>
-            <p className="text-[10px] text-indigo-400 font-mono">DYNAMIC PORTFOLIO MANAGEMENT SUITE // STANDALONE BACKEND</p>
+            <h1 className="text-sm font-semibold text-slate-100 tracking-wide font-sans">Portfolio Control Center</h1>
+            <p className="text-xs text-indigo-400 font-sans">Administrator Management Suite</p>
           </div>
         </div>
 
@@ -622,10 +633,10 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
           <button
             id="close_workspace_btn"
             onClick={onClose}
-            className="px-4 py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 hover:text-white font-mono text-xs rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
+            className="px-4 py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 hover:text-white font-sans text-xs rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
           >
             <X size={12} />
-            <span>EXIT_WORKSPACE</span>
+            <span>Exit Workspace</span>
           </button>
         </div>
       </div>
@@ -643,15 +654,15 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
               <div className="p-3 bg-indigo-950/20 border border-indigo-900/30 text-indigo-400 rounded-2xl">
                 <Lock size={22} className="animate-pulse" />
               </div>
-              <h2 className="text-xl font-bold text-slate-100 font-mono">ADMINISTRATIVE HANDSHAKE</h2>
-              <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
-                Unlock full CRUD capabilities, real-time metrics, credentials catalogs, and AI-assisted mailbox replies.
+              <h2 className="text-xl font-bold text-slate-100 font-sans">Secure Admin Login</h2>
+              <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+                Unlock editing capabilities, live client inquiries inbox, skills control, and credentials pathway management.
               </p>
             </div>
 
             <form onSubmit={handleLogin} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider">SECURE WORKSPACE KEY</label>
+                <label className="text-[11px] font-sans text-slate-400 font-medium tracking-wide">Enter Security Password</label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
@@ -659,7 +670,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full bg-slate-900/60 border border-slate-850 focus:border-indigo-500/40 focus:ring-1 focus:ring-indigo-500/25 transition-all rounded-xl pl-4 pr-10 py-3 text-sm text-slate-200 font-mono focus:outline-none"
+                    className="w-full bg-slate-900/60 border border-slate-850 focus:border-indigo-500/40 focus:ring-1 focus:ring-indigo-500/25 transition-all rounded-xl pl-4 pr-10 py-3 text-sm text-slate-200 font-sans focus:outline-none"
                   />
                   <button
                     type="button"
@@ -672,16 +683,16 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
               </div>
 
               {loginError && (
-                <div className="text-xs font-mono text-red-400 bg-red-950/20 border border-red-900/30 px-3.5 py-2.5 rounded-xl">
+                <div className="text-xs font-sans text-red-400 bg-red-950/20 border border-red-900/30 px-3.5 py-2.5 rounded-xl">
                   ⚠️ {loginError}
                 </div>
               )}
 
               <button
                 type="submit"
-                className="w-full py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:via-indigo-500 hover:to-purple-500 text-white font-semibold text-xs font-mono rounded-xl transition-all duration-300 cursor-pointer shadow-lg shadow-indigo-950/50 hover:scale-[1.01]"
+                className="w-full py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:via-indigo-500 hover:to-purple-500 text-white font-semibold text-xs font-sans rounded-xl transition-all duration-300 cursor-pointer shadow-lg shadow-indigo-950/50 hover:scale-[1.01]"
               >
-                UNLOCK SYSTEM ENGINE &rarr;
+                Log In &rarr;
               </button>
             </form>
           </motion.div>
@@ -693,11 +704,11 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
           {/* Left Sidebar Navigation */}
           <div className="lg:w-64 flex flex-col gap-4 flex-shrink-0 select-none">
             <div className="bg-slate-950 border border-slate-900/90 rounded-2xl p-4 flex flex-col gap-1.5 shadow-md">
-              <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest px-3 mb-2 font-bold block">WORKSPACE MODULES</span>
+              <span className="text-[10px] font-sans text-slate-400 uppercase tracking-wider px-3 mb-2 font-bold block">Dashboard Modules</span>
               
               <button
                 onClick={() => setActiveTab("dashboard")}
-                className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-mono flex items-center justify-between transition-all cursor-pointer ${
+                className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-sans flex items-center justify-between transition-all cursor-pointer ${
                   activeTab === "dashboard" 
                     ? "bg-indigo-600 text-white font-semibold shadow shadow-indigo-500/10" 
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
@@ -705,14 +716,14 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
               >
                 <div className="flex items-center gap-2">
                   <Activity size={13} />
-                  <span>DASHBOARD</span>
+                  <span>Overview Dashboard</span>
                 </div>
-                <span className="text-[9px] text-slate-500 uppercase font-mono">SYS_CORE</span>
+                <span className="text-[9px] text-slate-500 font-sans">Core</span>
               </button>
 
               <button
                 onClick={() => setActiveTab("messages")}
-                className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-mono flex items-center justify-between transition-all cursor-pointer ${
+                className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-sans flex items-center justify-between transition-all cursor-pointer ${
                   activeTab === "messages" 
                     ? "bg-blue-600 text-white font-semibold shadow shadow-blue-500/10" 
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
@@ -720,73 +731,73 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
               >
                 <div className="flex items-center gap-2">
                   <Mail size={13} />
-                  <span>CONTACT_INBOX</span>
+                  <span>Inbound Messages</span>
                 </div>
                 {messages.filter(m => !m.read).length > 0 ? (
-                  <span className="bg-red-500 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-bounce">
+                  <span className="bg-red-500 text-white font-sans text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-bounce">
                     {messages.filter(m => !m.read).length}
                   </span>
                 ) : (
-                  <span className="text-[9px] font-mono text-slate-500">{messages.length}</span>
+                  <span className="text-[9px] font-sans text-slate-500">{messages.length}</span>
                 )}
               </button>
 
               <button
                 onClick={() => setActiveTab("projects")}
-                className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-mono flex items-center gap-2 transition-all cursor-pointer ${
+                className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-sans flex items-center gap-2 transition-all cursor-pointer ${
                   activeTab === "projects" 
                     ? "bg-purple-600 text-white font-semibold shadow shadow-purple-500/10" 
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
                 }`}
               >
                 <LayoutGrid size={13} />
-                <span>PROJECTS_PORTFOLIO</span>
+                <span>Projects Portfolio</span>
               </button>
 
               <button
                 onClick={() => setActiveTab("skills")}
-                className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-mono flex items-center gap-2 transition-all cursor-pointer ${
+                className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-sans flex items-center gap-2 transition-all cursor-pointer ${
                   activeTab === "skills" 
                     ? "bg-pink-600 text-white font-semibold shadow shadow-pink-500/10" 
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
                 }`}
               >
                 <Sliders size={13} />
-                <span>SKILLS_MATRIX</span>
+                <span>Skills Matrix</span>
               </button>
 
               <button
                 onClick={() => setActiveTab("certifications")}
-                className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-mono flex items-center gap-2 transition-all cursor-pointer ${
+                className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-sans flex items-center gap-2 transition-all cursor-pointer ${
                   activeTab === "certifications" 
                     ? "bg-emerald-600 text-white font-semibold shadow shadow-emerald-500/10" 
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
                 }`}
               >
                 <Award size={13} />
-                <span>CREDENTIALS_LIST</span>
+                <span>Certifications</span>
               </button>
 
               <button
                 onClick={() => setActiveTab("profile")}
-                className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-mono flex items-center gap-2 transition-all cursor-pointer ${
+                className={`w-full px-3.5 py-2.5 rounded-xl text-left text-xs font-sans flex items-center gap-2 transition-all cursor-pointer ${
                   activeTab === "profile" 
                     ? "bg-amber-600 text-white font-semibold shadow shadow-amber-500/10" 
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-900"
                 }`}
               >
                 <User size={13} />
-                <span>PROFILE_ASSETS</span>
+                <span>Profile & Resume</span>
               </button>
             </div>
 
             {/* Logout Action */}
             <button
               onClick={handleLogout}
-              className="w-full px-4 py-3 bg-red-950/10 hover:bg-red-950/20 border border-red-900/20 text-red-400 hover:text-red-300 font-mono text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+              className="w-full px-4 py-3 bg-red-950/10 hover:bg-red-950/20 border border-red-900/20 text-red-400 hover:text-red-300 font-sans text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
             >
               <LogOut size={13} />
-              <span>TERMINATE_SESSION</span>
+              <span>Log Out</span>
             </button>
           </div>
 
@@ -799,7 +810,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className={`mb-4 text-xs font-mono p-3 rounded-xl border flex items-center gap-2 shadow-md ${
+                  className={`mb-4 text-xs font-sans p-3 rounded-xl border flex items-center gap-2 shadow-md ${
                     statusMessage.error 
                       ? "bg-red-950/20 border-red-900/40 text-red-400" 
                       : "bg-emerald-950/20 border-emerald-900/40 text-emerald-400"
@@ -815,9 +826,9 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             <div className="bg-slate-950/30 border border-slate-900 rounded-3xl p-5 sm:p-6 flex-1 shadow-inner relative flex flex-col">
               {loading && (
                 <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm z-30 flex items-center justify-center rounded-3xl">
-                  <div className="flex flex-col items-center gap-2 text-slate-400 font-mono text-xs">
+                  <div className="flex flex-col items-center gap-2 text-slate-400 font-sans text-xs">
                     <RefreshCw size={24} className="animate-spin text-indigo-500" />
-                    <span>SYNCHRONIZING SECURE REMOTE DATABASE...</span>
+                    <span>Synchronizing remote database...</span>
                   </div>
                 </div>
               )}
@@ -827,46 +838,46 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 <div className="flex flex-col gap-6 flex-1">
                   {/* Dashboard Header */}
                   <div>
-                    <h2 className="text-md font-bold text-slate-100 flex items-center gap-2 font-mono">
+                    <h2 className="text-md font-bold text-slate-100 flex items-center gap-2 font-sans">
                       <Activity size={14} className="text-indigo-400" />
-                      <span>SYS_CORE_ANALYTICS_DASHBOARD</span>
+                      <span>System Overview Dashboard</span>
                     </h2>
-                    <p className="text-[10px] text-slate-500 font-mono mt-0.5">Real-time statistics aggregating dynamic data streams securely.</p>
+                    <p className="text-xs text-slate-400 font-sans mt-0.5">Real-time statistics aggregating dynamic data streams securely.</p>
                   </div>
 
                   {/* Summary Metric Bento Grid */}
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <div className="bg-slate-950/80 border border-slate-900 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
-                      <span className="text-[9px] font-mono text-slate-500 tracking-wider uppercase">Inbound Inquiries</span>
+                      <span className="text-[11px] font-sans text-slate-400 tracking-wider uppercase">Inbound Inquiries</span>
                       <span className="text-2xl font-bold font-mono text-indigo-400">{messages.length}</span>
-                      <span className="text-[9px] text-slate-500 font-mono">All-time count</span>
+                      <span className="text-[10px] text-slate-500 font-sans">All-time count</span>
                     </div>
 
                     <div className="bg-slate-950/80 border border-slate-900 p-4 rounded-2xl flex flex-col gap-1 shadow-sm relative overflow-hidden">
-                      <span className="text-[9px] font-mono text-slate-500 tracking-wider uppercase">Action Needed</span>
+                      <span className="text-[11px] font-sans text-slate-400 tracking-wider uppercase">Action Needed</span>
                       <span className="text-2xl font-bold font-mono text-blue-400">
                         {messages.filter(m => !m.read).length}
                       </span>
-                      <span className="text-[9px] text-slate-500 font-mono">Unread messages</span>
+                      <span className="text-[10px] text-slate-500 font-sans">Unread messages</span>
                       {messages.filter(m => !m.read).length > 0 && (
                         <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
                       )}
                     </div>
 
                     <div className="bg-slate-950/80 border border-slate-900 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
-                      <span className="text-[9px] font-mono text-slate-500 tracking-wider uppercase">Live Projects</span>
+                      <span className="text-[11px] font-sans text-slate-400 tracking-wider uppercase">Live Projects</span>
                       <span className="text-2xl font-bold font-mono text-purple-400">{projects.length}</span>
-                      <span className="text-[9px] text-slate-500 font-mono">Featured grid works</span>
+                      <span className="text-[10px] text-slate-500 font-sans">Featured grid works</span>
                     </div>
 
                     <div className="bg-slate-950/80 border border-slate-900 p-4 rounded-2xl flex flex-col gap-1 shadow-sm">
-                      <span className="text-[9px] font-mono text-slate-500 tracking-wider uppercase">Credentials</span>
+                      <span className="text-[11px] font-sans text-slate-400 tracking-wider uppercase">Credentials</span>
                       <span className="text-2xl font-bold font-mono text-emerald-400">{certifications.length}</span>
-                      <span className="text-[9px] text-slate-500 font-mono">Verified path items</span>
+                      <span className="text-[10px] text-slate-500 font-sans">Verified path items</span>
                     </div>
 
                     <div className="bg-slate-950/80 border border-slate-900 p-4 rounded-2xl flex flex-col gap-1 shadow-sm col-span-2 md:col-span-1">
-                      <span className="text-[9px] font-mono text-slate-500 tracking-wider uppercase">Avg Skill Scale</span>
+                      <span className="text-[11px] font-sans text-slate-400 tracking-wider uppercase">Avg Skill Scale</span>
                       <span className="text-2xl font-bold font-mono text-pink-400">
                         {skills.length > 0 
                           ? Math.round(
@@ -878,7 +889,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                             )
                           : 0}%
                       </span>
-                      <span className="text-[9px] text-slate-500 font-mono">Technical matrix depth</span>
+                      <span className="text-[10px] text-slate-500 font-sans">Technical matrix depth</span>
                     </div>
                   </div>
 
@@ -887,11 +898,11 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                     {/* Inquiry engagement timeline */}
                     <div className="bg-slate-950/40 border border-slate-900 p-4 rounded-2xl flex flex-col gap-2 min-h-[220px]">
                       <div className="flex items-center justify-between pb-1">
-                        <span className="text-[10px] font-mono text-indigo-400 uppercase tracking-widest font-semibold flex items-center gap-1.5">
+                        <span className="text-[11px] font-sans text-indigo-400 font-semibold flex items-center gap-1.5">
                           <Activity size={10} />
-                          <span>CONTACT_VOLUME_TIMELINE</span>
+                          <span>Contact Volume Timeline</span>
                         </span>
-                        <span className="text-[9px] text-slate-500 font-mono">PAST 6 RECORDS</span>
+                        <span className="text-[10px] text-slate-500 font-sans">Past 6 records</span>
                       </div>
                       <div className="flex-1 min-h-[160px]">
                         <ResponsiveContainer width="100%" height="100%">
@@ -914,11 +925,11 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                     {/* Skill Category breadths */}
                     <div className="bg-slate-950/40 border border-slate-900 p-4 rounded-2xl flex flex-col gap-2 min-h-[220px]">
                       <div className="flex items-center justify-between pb-1">
-                        <span className="text-[10px] font-mono text-pink-400 uppercase tracking-widest font-semibold flex items-center gap-1.5">
+                        <span className="text-[11px] font-sans text-pink-400 font-semibold flex items-center gap-1.5">
                           <BarChart3 size={10} />
-                          <span>TECHNICAL_MATRICES_competency</span>
+                          <span>Technical Matrices Competency</span>
                         </span>
-                        <span className="text-[9px] text-slate-500 font-mono">AVGS BY CATEGORY</span>
+                        <span className="text-[10px] text-slate-500 font-sans">Averages by category</span>
                       </div>
                       <div className="flex-1 min-h-[160px]">
                         <ResponsiveContainer width="100%" height="100%">
@@ -994,14 +1005,14 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 <div className="flex flex-col h-full flex-1">
                   <div className="flex items-center justify-between pb-4 border-b border-slate-900/80 mb-6 flex-shrink-0">
                     <div>
-                      <h2 className="text-md font-bold text-slate-100 flex items-center gap-2 font-mono">
+                      <h2 className="text-md font-bold text-slate-100 flex items-center gap-2 font-sans">
                         <Mail size={14} className="text-blue-400" />
-                        <span>RECEIVED_MESSAGES_LOG</span>
+                        <span>Received Messages Inbox</span>
                       </h2>
-                      <p className="text-[10px] text-slate-500 font-mono mt-0.5">Inbox entries compiled dynamically with database audit logs & AI replies.</p>
+                      <p className="text-xs text-slate-400 font-sans mt-0.5">Inbox entries compiled dynamically with database audit logs & AI replies.</p>
                     </div>
-                    <span className="text-xs font-mono bg-blue-950/40 border border-blue-900/30 text-blue-400 px-2.5 py-1 rounded-lg">
-                      COUNT: {messages.length}
+                    <span className="text-xs font-sans bg-blue-950/40 border border-blue-900/30 text-blue-400 px-2.5 py-1 rounded-lg">
+                      Messages: {messages.length}
                     </span>
                   </div>
 
@@ -1128,11 +1139,11 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                 <div className="flex flex-col h-full flex-1">
                   <div className="flex items-center justify-between pb-4 border-b border-slate-900/80 mb-6 flex-shrink-0">
                     <div>
-                      <h2 className="text-md font-bold text-slate-100 flex items-center gap-2 font-mono">
+                      <h2 className="text-md font-bold text-slate-100 flex items-center gap-2 font-sans">
                         <FolderPlus size={14} className="text-purple-400" />
-                        <span>ENGINEERING_PROJECTS_DB</span>
+                        <span>Portfolio Projects</span>
                       </h2>
-                      <p className="text-[10px] text-slate-500 font-mono mt-0.5">Control individual items within the Featured Works listing.</p>
+                      <p className="text-xs text-slate-400 font-sans mt-0.5">Control individual items within the Featured Works listing.</p>
                     </div>
                     <button
                       onClick={() => {
@@ -1151,10 +1162,10 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
                         });
                         setIsNewProject(true);
                       }}
-                      className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-mono text-xs font-bold rounded-xl flex items-center gap-1 transition-all cursor-pointer shadow shadow-purple-950/20"
+                      className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-sans text-xs font-bold rounded-xl flex items-center gap-1 transition-all cursor-pointer shadow shadow-purple-950/20"
                     >
                       <Plus size={12} />
-                      <span>ADD_PROJECT</span>
+                      <span>Add Project</span>
                     </button>
                   </div>
 

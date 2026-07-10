@@ -226,6 +226,46 @@
   ],
   "messages": [
     {
+      "name": "Demo",
+      "email": "25mca002@charusat.edu.in",
+      "message": "demo",
+      "id": "msg_dn7ydoy7s",
+      "timestamp": "2026-07-10T12:39:43.678Z",
+      "read": true,
+      "replies": [
+        {
+          "id": "rep_nc5wjbrcj",
+          "message": "hello demo",
+          "timestamp": "2026-07-10T12:40:00.425Z"
+        }
+      ]
+    },
+    {
+      "name": "Montu sheth",
+      "email": "seldom908@gmail.com",
+      "message": "Ka sheth ",
+      "id": "msg_cubwbv1dd",
+      "timestamp": "2026-07-10T06:35:51.952Z",
+      "read": true,
+      "replies": [
+        {
+          "id": "rep_od50u8sp0",
+          "message": "Hello Sheth",
+          "timestamp": "2026-07-10T06:36:29.345Z"
+        },
+        {
+          "id": "rep_7wodmk2am",
+          "message": "Hi Montu,\n\nThank you for reaching out! I am writing to you on behalf of Raviraj Chauhan. He is doing fantastic and is currently channelizing his energy into his MCA at CHARUSAT and developing high-quality, full-stack web applications.\n\nAs a Creative Full-Stack Developer, Raviraj specializes in Django, Angular, and robust database management. He recently engineered **EduTrack**, a fully-featured, role-based Learning Management System utilizing Django REST Framework and AngularJS, showcasing his ability to build secure, scalable, and production-ready platforms.\n\nIf you are exploring project collaborations, looking to hire, or want to discuss full-stack development opportunities, Raviraj would be delighted to connect with you. Please let us know how we can assist you further!\n\nBest regards,\n\nAI Recruiter Assistant  \nOn behalf of Raviraj Chauhan  \nEmail: ravirajchauhan219@gmail.com  \nPhone: +91 7984887716  \nLocation: Botad, Gujarat, India",
+          "timestamp": "2026-07-10T06:39:06.326Z"
+        },
+        {
+          "id": "rep_tsmyqeo0x",
+          "message": "Hello Sheth\n\nRaviraj Chauhan (Admin)\n7/9/2026, 11:39:06 PM\nHi Montu,\n\nThank you for reaching out! I am writing to you on behalf of Raviraj Chauhan. He is doing fantastic and is currently channelizing his energy into his MCA at CHARUSAT and developing high-quality, full-stack web applications.\n\nAs a Creative Full-Stack Developer, Raviraj specializes in Django, Angular, and robust database management. He recently engineered **EduTrack**, a fully-featured, role-based Learning Management System utilizing Django REST Framework and AngularJS, showcasing his ability to build secure, scalable, and production-ready platforms.\n\nIf you are exploring project collaborations, looking to hire, or want to discuss full-stack development opportunities, Raviraj would be delighted to connect with you. Please let us know how we can assist you further!\n\nBest regards,\n\nAI Recruiter Assistant  \nOn behalf of Raviraj Chauhan  \nEmail: ravirajchauhan219@gmail.com  \nPhone: +91 7984887716  \nLocation: Botad, Gujarat, India",
+          "timestamp": "2026-07-10T12:38:33.933Z"
+        }
+      ]
+    },
+    {
       "name": "Ddemo",
       "email": "ravirajchauhan219@gmail.com",
       "message": "demo",
@@ -237,6 +277,16 @@
           "id": "rep_9q2j1zoyy",
           "message": "Hello This is a Raviraj",
           "timestamp": "2026-07-07T12:10:23.603Z"
+        },
+        {
+          "id": "rep_gf7tb5jye",
+          "message": "Hello",
+          "timestamp": "2026-07-10T06:37:30.094Z"
+        },
+        {
+          "id": "rep_zl1p5i97u",
+          "message": "Hello",
+          "timestamp": "2026-07-10T12:38:58.313Z"
         }
       ]
     }

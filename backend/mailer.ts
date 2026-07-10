@@ -56,10 +56,9 @@ async function getTransporter() {
 
 export async function sendReplyEmail(params: SendEmailParams): Promise<{ success: boolean; previewUrl?: string; info?: any }> {
   try {
-    const transporter = await getTransporter();
-    
     const senderName = "Raviraj Chauhan";
-    const senderEmail = process.env.SMTP_FROM || "ravirajchauhan219@gmail.com";
+    const portfolioUrl = process.env.APP_URL || "https://ais-dev-xfacfffibudgwoj4dob52l-748237559399.asia-southeast1.run.app";
+    const textContent = `${params.replyText}\n\n---\nOriginal message from you:\n"${params.originalMessage}"`;
 
     const emailHtml = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #020617; padding: 40px 20px; color: #f1f5f9; text-align: left;">
@@ -88,7 +87,7 @@ export async function sendReplyEmail(params: SendEmailParams): Promise<{ success
 
             <!-- Button -->
             <div style="text-align: center; margin: 30px 0;">
-              <a href="https://ais-dev-xfacfffibudgwoj4dob52l-748237559399.asia-southeast1.run.app" target="_blank" style="background-color: #3b82f6; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 14px; transition: all 0.2s; display: inline-block; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);">Visit My Portfolio</a>
+              <a href="${portfolioUrl}" target="_blank" style="background-color: #3b82f6; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 14px; transition: all 0.2s; display: inline-block; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);">Visit My Portfolio</a>
             </div>
 
             <hr style="border: 0; border-top: 1px solid #1e293b; margin: 30px 0;" />
@@ -110,11 +109,50 @@ export async function sendReplyEmail(params: SendEmailParams): Promise<{ success
       </div>
     `;
 
+    // 1. Try Resend API if RESEND_API_KEY is configured
+    const resendApiKey = process.env.RESEND_API_KEY;
+    if (resendApiKey) {
+      const senderEmail = process.env.RESEND_FROM || "onboarding@resend.dev";
+      console.log(`[Resend API] Preparing to dispatch email response to <${params.to}> from <${senderEmail}>`);
+      
+      try {
+        const response = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${resendApiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            from: `"${senderName}" <${senderEmail}>`,
+            to: [params.to],
+            subject: params.subject,
+            html: emailHtml,
+            text: textContent
+          })
+        });
+
+        if (response.ok) {
+          const resData = await response.json();
+          console.log("[Resend API] Email dispatched successfully! Delivery reference:", resData.id || resData);
+          return { success: true, info: resData };
+        } else {
+          const errDetail = await response.text();
+          console.warn(`[Resend API] Delivery failed with code ${response.status}: ${errDetail}. Attempting standard SMTP fallback.`);
+        }
+      } catch (resendErr: any) {
+        console.error("[Resend API] Network or payload error. Attempting standard SMTP fallback:", resendErr.message || resendErr);
+      }
+    }
+
+    // 2. Standard SMTP Fallback (Nodemailer / Ethereal Test Inbox)
+    const transporter = await getTransporter();
+    const senderEmail = process.env.SMTP_FROM || "ravirajchauhan219@gmail.com";
+
     const mailOptions = {
       from: `"${senderName}" <${senderEmail}>`,
       to: `"${params.toName}" <${params.to}>`,
       subject: params.subject,
-      text: `${params.replyText}\n\n---\nOriginal message from you:\n"${params.originalMessage}"`,
+      text: textContent,
       html: emailHtml,
     };
 
@@ -128,7 +166,7 @@ export async function sendReplyEmail(params: SendEmailParams): Promise<{ success
 
     return { success: true, previewUrl, info };
   } catch (error) {
-    console.error("Error in sendReplyEmail:", error);
+    console.error("Error in sendReplyEmail general cycle:", error);
     return { success: false };
   }
 }

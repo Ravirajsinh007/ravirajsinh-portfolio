@@ -2,7 +2,8 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+   --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif; 
+  --font-heading: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif; /* Headings font */
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --font-serif: "Playfair Display", ui-serif, Georgia, serif;
 }

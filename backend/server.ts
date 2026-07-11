@@ -1,6 +1,6 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
-import dotenv from "dotenv";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
@@ -34,8 +34,6 @@ try {
 } catch (e) {
   resolvedDirname = process.cwd();
 }
-
-dotenv.config();
 
 // Lazy initialization of Gemini client
 let aiClient: GoogleGenAI | null = null;
@@ -211,12 +209,75 @@ async function startServer() {
   app.use(express.json({ limit: "25mb" }));
   app.use(express.urlencoded({ limit: "25mb", extended: true }));
 
+  // Robust CORS middleware supporting dynamic split-hosting (e.g. Vercel frontend & Render backend)
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    } else {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    }
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+
+    // Handle Preflight OPTIONS requests
+    if (req.method === "OPTIONS") {
+      res.sendStatus(204);
+      return;
+    }
+    next();
+  });
+
   // Initialize and serve uploads directory for resume & photos
-  const uploadsDir = path.join(process.cwd(), "uploads");
+  const getStorageDir = (): string => {
+    if (process.env.PERSISTENT_DIR) {
+      const pDir = path.resolve(process.env.PERSISTENT_DIR);
+      if (!fs.existsSync(pDir)) {
+        try {
+          fs.mkdirSync(pDir, { recursive: true });
+        } catch (err) {
+          console.error("Could not create PERSISTENT_DIR for uploads:", pDir, err);
+        }
+      }
+      return pDir;
+    }
+    return process.cwd();
+  };
+
+  const uploadsDir = path.join(getStorageDir(), "uploads");
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
-  app.use("/uploads", express.static(uploadsDir));
+  app.get("/uploads/:filename", async (req, res) => {
+    try {
+      const filename = req.params.filename;
+      const filePath = path.join(uploadsDir, filename);
+
+      // 1. Check if the file exists locally, if so serve it immediately (extremely fast)
+      if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+        return;
+      }
+
+      // 2. If it is missing locally (e.g. after a redeployment), pull it from the Supabase database
+      const dbFile = await JSONDatabase.getUpload(filename);
+      if (dbFile) {
+        const buffer = Buffer.from(dbFile.base64Data, "base64");
+        // Cache it locally so subsequent requests are lightning-fast and don't hit the database
+        fs.writeFileSync(filePath, buffer);
+        
+        res.setHeader("Content-Type", dbFile.contentType);
+        res.send(buffer);
+        return;
+      }
+
+      res.status(404).send("File not found");
+    } catch (err: any) {
+      console.error("Error serving uploaded file:", err);
+      res.status(500).send("Internal server error");
+    }
+  });
 
   // API Health check
   app.get("/api/health", (req, res) => {
@@ -224,7 +285,7 @@ async function startServer() {
   });
 
   // Detailed Live System Diagnostics check
-  app.get("/api/status-check", (req, res) => {
+  app.get("/api/status-check", async (req, res) => {
     try {
       const dbPath = path.join(process.cwd(), "database.json");
       let dbSize = 0;
@@ -236,10 +297,10 @@ async function startServer() {
           dbSize = stats.size;
         }
         // Count database records dynamically
-        const projectsCount = JSONDatabase.getProjects().length;
-        const skillsCount = JSONDatabase.getSkills().length;
-        const certsCount = JSONDatabase.getCertifications().length;
-        const msgsCount = JSONDatabase.getMessages().length;
+        const projectsCount = (await JSONDatabase.getProjects()).length;
+        const skillsCount = (await JSONDatabase.getSkills()).length;
+        const certsCount = (await JSONDatabase.getCertifications()).length;
+        const msgsCount = (await JSONDatabase.getMessages()).length;
         dbRecordsCount = projectsCount + skillsCount + certsCount + msgsCount;
       } catch (dbErr) {
         console.error("Error evaluating database status:", dbErr);
@@ -258,6 +319,7 @@ async function startServer() {
 
       // Evaluate Gemini configurations
       const hasGeminiKey = !!process.env.GEMINI_API_KEY;
+      const hasSupabase = !!(process.env.SUPABASE_URL && process.env.SUPABASE_KEY);
 
       res.json({
         ok: true,
@@ -273,10 +335,10 @@ async function startServer() {
           },
           database: {
             status: "operational",
-            name: "JSONDatabase Dynamic Storage Engine",
-            sizeBytes: dbSize,
+            name: hasSupabase ? "Supabase PostgreSQL Cloud Database" : "JSONDatabase Dynamic Local Storage",
+            sizeBytes: hasSupabase ? 0 : dbSize,
             recordsCount: dbRecordsCount,
-            file: "database.json"
+            file: hasSupabase ? "Cloud Store Table" : "database.json"
           },
           gemini: {
             status: hasGeminiKey ? "operational" : "degraded",
@@ -323,47 +385,47 @@ async function startServer() {
   }
 
   // PUBLIC APIs for Dynamic Portfolio Content
-  app.get("/api/projects", (req, res) => {
+  app.get("/api/projects", async (req, res) => {
     try {
-      res.json(JSONDatabase.getProjects());
+      res.json(await JSONDatabase.getProjects());
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.get("/api/skills", (req, res) => {
+  app.get("/api/skills", async (req, res) => {
     try {
-      res.json(JSONDatabase.getSkills());
+      res.json(await JSONDatabase.getSkills());
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.get("/api/certifications", (req, res) => {
+  app.get("/api/certifications", async (req, res) => {
     try {
-      res.json(JSONDatabase.getCertifications());
+      res.json(await JSONDatabase.getCertifications());
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.get("/api/profile", (req, res) => {
+  app.get("/api/profile", async (req, res) => {
     try {
-      res.json(JSONDatabase.getProfile());
+      res.json(await JSONDatabase.getProfile());
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
   // POST endpoint to handle public contact form submissions securely
-  app.post("/api/contact", (req, res) => {
+  app.post("/api/contact", async (req, res) => {
     try {
       const { name, email, message } = req.body;
       if (!name || !email || !message) {
         res.status(400).json({ error: "Name, email, and message are required." });
         return;
       }
-      const newMsg = JSONDatabase.addMessage({ name, email, message });
+      const newMsg = await JSONDatabase.addMessage({ name, email, message });
       res.status(201).json({ success: true, message: newMsg });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -393,14 +455,14 @@ async function startServer() {
   // ADMIN ENDPOINTS (SECURED via JWT middleware)
   
   // Projects Admin API
-  app.post("/api/admin/projects", authenticateAdmin, (req, res) => {
+  app.post("/api/admin/projects", authenticateAdmin, async (req, res) => {
     try {
       const { id, title, subtitle, tagline, description, features, techStack, year, links, metrics, imageUrl } = req.body;
       if (!id || !title || !subtitle || !description) {
         res.status(400).json({ error: "ID, Title, Subtitle, and Description are required." });
         return;
       }
-      const newProj = JSONDatabase.addProject({
+      const newProj = await JSONDatabase.addProject({
         id,
         title,
         subtitle,
@@ -419,9 +481,9 @@ async function startServer() {
     }
   });
 
-  app.put("/api/admin/projects/:id", authenticateAdmin, (req, res) => {
+  app.put("/api/admin/projects/:id", authenticateAdmin, async (req, res) => {
     try {
-      const updated = JSONDatabase.updateProject(req.params.id, req.body);
+      const updated = await JSONDatabase.updateProject(req.params.id, req.body);
       if (!updated) {
         res.status(404).json({ error: "Project not found." });
         return;
@@ -432,9 +494,9 @@ async function startServer() {
     }
   });
 
-  app.delete("/api/admin/projects/:id", authenticateAdmin, (req, res) => {
+  app.delete("/api/admin/projects/:id", authenticateAdmin, async (req, res) => {
     try {
-      const success = JSONDatabase.deleteProject(req.params.id);
+      const success = await JSONDatabase.deleteProject(req.params.id);
       if (!success) {
         res.status(404).json({ error: "Project not found." });
         return;
@@ -446,24 +508,24 @@ async function startServer() {
   });
 
   // Skills Admin API (replaces entire skills array for easy sorting/management)
-  app.put("/api/admin/skills", authenticateAdmin, (req, res) => {
+  app.put("/api/admin/skills", authenticateAdmin, async (req, res) => {
     try {
       const { categories } = req.body;
       if (!Array.isArray(categories)) {
         res.status(400).json({ error: "Categories must be a valid list." });
         return;
       }
-      JSONDatabase.setSkills(categories);
-      res.json({ success: true, skills: JSONDatabase.getSkills() });
+      await JSONDatabase.setSkills(categories);
+      res.json({ success: true, skills: await JSONDatabase.getSkills() });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
   // Admin Profile API
-  app.put("/api/admin/profile", authenticateAdmin, (req, res) => {
+  app.put("/api/admin/profile", authenticateAdmin, async (req, res) => {
     try {
-      const updated = JSONDatabase.updateProfile(req.body);
+      const updated = await JSONDatabase.updateProfile(req.body);
       res.json(updated);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -471,7 +533,7 @@ async function startServer() {
   });
 
   // Admin File Upload API
-  app.post("/api/admin/upload", authenticateAdmin, (req, res) => {
+  app.post("/api/admin/upload", authenticateAdmin, async (req, res) => {
     try {
       const { fileName, fileData } = req.body;
       if (!fileName || !fileData) {
@@ -488,6 +550,13 @@ async function startServer() {
       const filePath = path.join(uploadsDir, sanitizedFileName);
       
       fs.writeFileSync(filePath, buffer);
+
+      // Extract the MIME type from the base64 string if present, defaulting to stream
+      const mimeMatch = fileData.match(/^data:(.*?);base64,/);
+      const contentType = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+
+      // Persist the file in Supabase PostgreSQL Cloud Database so it's never lost
+      await JSONDatabase.saveUpload(sanitizedFileName, contentType, base64Content);
       
       const fileUrl = `/uploads/${sanitizedFileName}`;
       res.json({ success: true, url: fileUrl, fileName: sanitizedFileName });
@@ -497,7 +566,7 @@ async function startServer() {
   });
 
   // Certifications Admin API
-  app.post("/api/admin/certifications", authenticateAdmin, (req, res) => {
+  app.post("/api/admin/certifications", authenticateAdmin, async (req, res) => {
     try {
       const { title, issuer, link, imageUrl } = req.body;
       if (!title || !issuer || !link) {
@@ -505,16 +574,16 @@ async function startServer() {
         return;
       }
       const id = "cert_" + Math.random().toString(36).substr(2, 9);
-      const newCert = JSONDatabase.addCertification({ id, title, issuer, link, imageUrl: imageUrl || "" });
+      const newCert = await JSONDatabase.addCertification({ id, title, issuer, link, imageUrl: imageUrl || "" });
       res.status(201).json(newCert);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.delete("/api/admin/certifications/:id", authenticateAdmin, (req, res) => {
+  app.delete("/api/admin/certifications/:id", authenticateAdmin, async (req, res) => {
     try {
-      const success = JSONDatabase.deleteCertification(req.params.id);
+      const success = await JSONDatabase.deleteCertification(req.params.id);
       if (!success) {
         res.status(404).json({ error: "Certification not found." });
         return;
@@ -525,10 +594,10 @@ async function startServer() {
     }
   });
 
-  app.put("/api/admin/certifications/:id", authenticateAdmin, (req, res) => {
+  app.put("/api/admin/certifications/:id", authenticateAdmin, async (req, res) => {
     try {
       const { title, issuer, link, imageUrl } = req.body;
-      const updated = JSONDatabase.updateCertification(req.params.id, { title, issuer, link, imageUrl });
+      const updated = await JSONDatabase.updateCertification(req.params.id, { title, issuer, link, imageUrl });
       if (!updated) {
         res.status(404).json({ error: "Certification not found." });
         return;
@@ -540,17 +609,17 @@ async function startServer() {
   });
 
   // Contact Messages Admin API
-  app.get("/api/admin/messages", authenticateAdmin, (req, res) => {
+  app.get("/api/admin/messages", authenticateAdmin, async (req, res) => {
     try {
-      res.json(JSONDatabase.getMessages());
+      res.json(await JSONDatabase.getMessages());
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
-  app.put("/api/admin/messages/:id/read", authenticateAdmin, (req, res) => {
+  app.put("/api/admin/messages/:id/read", authenticateAdmin, async (req, res) => {
     try {
-      const success = JSONDatabase.markMessageRead(req.params.id);
+      const success = await JSONDatabase.markMessageRead(req.params.id);
       if (!success) {
         res.status(404).json({ error: "Message not found." });
         return;
@@ -561,9 +630,9 @@ async function startServer() {
     }
   });
 
-  app.delete("/api/admin/messages/:id", authenticateAdmin, (req, res) => {
+  app.delete("/api/admin/messages/:id", authenticateAdmin, async (req, res) => {
     try {
-      const success = JSONDatabase.deleteMessage(req.params.id);
+      const success = await JSONDatabase.deleteMessage(req.params.id);
       if (!success) {
         res.status(404).json({ error: "Message not found." });
         return;
@@ -583,14 +652,14 @@ async function startServer() {
         return;
       }
 
-      const messages = JSONDatabase.getMessages();
+      const messages = await JSONDatabase.getMessages();
       const targetMsg = messages.find(m => m.id === req.params.id);
       if (!targetMsg) {
         res.status(404).json({ error: "Target message not found." });
         return;
       }
 
-      const reply = JSONDatabase.addMessageReply(req.params.id, replyMessage);
+      const reply = await JSONDatabase.addMessageReply(req.params.id, replyMessage);
       if (!reply) {
         res.status(404).json({ error: "Failed to add reply to database." });
         return;
@@ -682,7 +751,7 @@ async function startServer() {
   // Dynamic AI reply drafting
   app.post("/api/admin/messages/:id/draft", authenticateAdmin, async (req, res) => {
     try {
-      const messages = JSONDatabase.getMessages();
+      const messages = await JSONDatabase.getMessages();
       const targetMsg = messages.find(m => m.id === req.params.id);
       if (!targetMsg) {
         res.status(404).json({ error: "Message on database not found." });
@@ -739,7 +808,7 @@ Please draft a professional, warm, and tailored email reply on behalf of Raviraj
     } catch (err: any) {
       console.error("Gemini API Error in /api/admin/messages/:id/draft:", err);
       // Fallback draft generation
-      const targetMsg = JSONDatabase.getMessages().find(m => m.id === req.params.id);
+      const targetMsg = (await JSONDatabase.getMessages()).find(m => m.id === req.params.id);
       const senderName = targetMsg ? targetMsg.name : "there";
       const userMessageExcerpt = targetMsg ? `"${targetMsg.message.slice(0, 50)}..."` : "your message";
       const fallbackDraft = `Hi ${senderName},\n\nThank you so much for reaching out to me! I appreciate your message regarding ${userMessageExcerpt}.\n\nI am very interested in your inquiry and would love to discuss this further. Please let me know a convenient time for us to connect, or feel free to email me directly at ravirajchauhan219@gmail.com.\n\nBest regards,\nRaviraj Chauhan\n\n*(Note: This standard response was drafted automatically as the live Gemini API key is currently experiencing issues)*`;

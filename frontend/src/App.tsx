@@ -263,7 +263,7 @@ export default function App() {
                         <ArrowUpRight size={11} className="opacity-0 group-hover:opacity-100 transition-all ml-1" />
                       </a>
                       <a
-                        href="https://instagram.com/raviraj_chauhan"
+                        href="https://www.instagram.com/chauhan_ravirajsinh_007/"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-2.5 text-xs font-mono text-slate-400 hover:text-pink-400 transition-colors group cursor-pointer"

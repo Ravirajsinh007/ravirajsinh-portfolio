@@ -28,7 +28,7 @@
         "live": "#"
       },
       "metrics": "100% Normalized DB, Secure Role-based JWT Auth",
-      "imageUrl": "/uploads/1783428508175_Annotation_2026-06-27_062007.png"
+      "imageUrl": "/uploads/1783749707217_EDUTRACK.jpg"
     },
     {
       "id": "ecommerce",
@@ -226,73 +226,47 @@
   ],
   "messages": [
     {
-      "name": "Demo",
-      "email": "25mca002@charusat.edu.in",
-      "message": "demo",
-      "id": "msg_dn7ydoy7s",
-      "timestamp": "2026-07-10T12:39:43.678Z",
+      "id": "msg_s5605my7k",
+      "name": "demo",
       "read": true,
-      "replies": [
-        {
-          "id": "rep_nc5wjbrcj",
-          "message": "hello demo",
-          "timestamp": "2026-07-10T12:40:00.425Z"
-        }
-      ]
-    },
-    {
-      "name": "Montu sheth",
-      "email": "seldom908@gmail.com",
-      "message": "Ka sheth ",
-      "id": "msg_cubwbv1dd",
-      "timestamp": "2026-07-10T06:35:51.952Z",
-      "read": true,
-      "replies": [
-        {
-          "id": "rep_od50u8sp0",
-          "message": "Hello Sheth",
-          "timestamp": "2026-07-10T06:36:29.345Z"
-        },
-        {
-          "id": "rep_7wodmk2am",
-          "message": "Hi Montu,\n\nThank you for reaching out! I am writing to you on behalf of Raviraj Chauhan. He is doing fantastic and is currently channelizing his energy into his MCA at CHARUSAT and developing high-quality, full-stack web applications.\n\nAs a Creative Full-Stack Developer, Raviraj specializes in Django, Angular, and robust database management. He recently engineered **EduTrack**, a fully-featured, role-based Learning Management System utilizing Django REST Framework and AngularJS, showcasing his ability to build secure, scalable, and production-ready platforms.\n\nIf you are exploring project collaborations, looking to hire, or want to discuss full-stack development opportunities, Raviraj would be delighted to connect with you. Please let us know how we can assist you further!\n\nBest regards,\n\nAI Recruiter Assistant  \nOn behalf of Raviraj Chauhan  \nEmail: ravirajchauhan219@gmail.com  \nPhone: +91 7984887716  \nLocation: Botad, Gujarat, India",
-          "timestamp": "2026-07-10T06:39:06.326Z"
-        },
-        {
-          "id": "rep_tsmyqeo0x",
-          "message": "Hello Sheth\n\nRaviraj Chauhan (Admin)\n7/9/2026, 11:39:06 PM\nHi Montu,\n\nThank you for reaching out! I am writing to you on behalf of Raviraj Chauhan. He is doing fantastic and is currently channelizing his energy into his MCA at CHARUSAT and developing high-quality, full-stack web applications.\n\nAs a Creative Full-Stack Developer, Raviraj specializes in Django, Angular, and robust database management. He recently engineered **EduTrack**, a fully-featured, role-based Learning Management System utilizing Django REST Framework and AngularJS, showcasing his ability to build secure, scalable, and production-ready platforms.\n\nIf you are exploring project collaborations, looking to hire, or want to discuss full-stack development opportunities, Raviraj would be delighted to connect with you. Please let us know how we can assist you further!\n\nBest regards,\n\nAI Recruiter Assistant  \nOn behalf of Raviraj Chauhan  \nEmail: ravirajchauhan219@gmail.com  \nPhone: +91 7984887716  \nLocation: Botad, Gujarat, India",
-          "timestamp": "2026-07-10T12:38:33.933Z"
-        }
-      ]
-    },
-    {
-      "name": "Ddemo",
       "email": "ravirajchauhan219@gmail.com",
       "message": "demo",
-      "id": "msg_2l4fko2se",
-      "timestamp": "2026-07-07T12:09:23.476Z",
+      "replies": [
+        {
+          "id": "rep_e1ydls6jt",
+          "message": "Hi Demo,\n\nThank you for reaching out! I am Raviraj’s AI Assistant, and I am thrilled to connect with you. \n\nRaviraj is a passionate Creative Full-Stack Developer currently pursuing his MCA at CHARUSAT, specializing in **Django, Angular, and SQL databases**. He has a proven track record of building robust, user-centric applications, such as **EduTrack**—a role-based learning management system featuring secure JWT authentication, REST APIs, and dynamic dashboards. With a strong academic foundation (9.68 CGPA in his BCA) and hands-on experience in full-stack development, he is eager to contribute to innovative projects.\n\nHe is currently open to internships, full-time developer roles, and project collaborations. Please let us know how we can assist you, or feel free to share any opportunities you would like to discuss!\n\nBest regards,\n\n**Raviraj Chauhan**  \nCreative Full-Stack Developer  \nEmail: ravirajchauhan219@gmail.com  \nPhone: +91 7984887716  \nLinkedIn: https://linkedin.com | GitHub: https://github.com",
+          "timestamp": "2026-07-11T07:43:53.377Z"
+        }
+      ],
+      "timestamp": "2026-07-11T06:32:18.721Z"
+    },
+    {
+      "id": "msg_biys3hbmb",
+      "name": "Demo",
       "read": true,
+      "email": "ravirajchauhan219@gmail.com",
+      "message": "Demo",
+      "replies": [],
+      "timestamp": "2026-07-11T06:19:23.185Z"
+    },
+    {
+      "id": "msg_2l4fko2se",
+      "name": "Ddemo",
+      "read": true,
+      "email": "ravirajchauhan219@gmail.com",
+      "message": "demo",
       "replies": [
         {
           "id": "rep_9q2j1zoyy",
           "message": "Hello This is a Raviraj",
           "timestamp": "2026-07-07T12:10:23.603Z"
-        },
-        {
-          "id": "rep_gf7tb5jye",
-          "message": "Hello",
-          "timestamp": "2026-07-10T06:37:30.094Z"
-        },
-        {
-          "id": "rep_zl1p5i97u",
-          "message": "Hello",
-          "timestamp": "2026-07-10T12:38:58.313Z"
         }
-      ]
+      ],
+      "timestamp": "2026-07-07T12:09:23.476Z"
     }
   ],
   "profile": {
-    "photoUrl": "/uploads/1783601832467_profile.png",
-    "resumeUrl": "/uploads/1783427697464_Raviraj_Resume.pdf"
+    "photoUrl": "/uploads/1783751442443_Profile.jpeg",
+    "resumeUrl": "/uploads/1783750981418_Raviraj_Chauhan_Resume.pdf"
   }
 }

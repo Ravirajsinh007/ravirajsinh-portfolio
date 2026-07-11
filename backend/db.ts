@@ -1,5 +1,7 @@
 import fs from "fs";
 import path from "path";
+import "dotenv/config";
+import { createClient } from "@supabase/supabase-js";
 
 export interface Project {
   id: string;
@@ -68,7 +70,139 @@ export interface DatabaseSchema {
   profile?: Profile;
 }
 
-const DB_FILE = path.join(process.cwd(), "database.json");
+// Check if a persistent storage directory is specified (useful for services like Render Persistent Disks)
+const getDbDir = (): string => {
+  if (process.env.PERSISTENT_DIR) {
+    const pDir = path.resolve(process.env.PERSISTENT_DIR);
+    if (!fs.existsSync(pDir)) {
+      try {
+        fs.mkdirSync(pDir, { recursive: true });
+      } catch (err) {
+        console.error("Could not create PERSISTENT_DIR:", pDir, err);
+      }
+    }
+    return pDir;
+  }
+  return process.cwd();
+};
+
+const DB_FILE = path.join(getDbDir(), "database.json");
+
+// Initialize Supabase Client
+let supabaseUrlRaw = (process.env.SUPABASE_URL || "").trim();
+if (supabaseUrlRaw) {
+  supabaseUrlRaw = supabaseUrlRaw.replace(/\/+$/, "");
+  if (supabaseUrlRaw.endsWith("/rest/v1")) {
+    supabaseUrlRaw = supabaseUrlRaw.slice(0, -8);
+  }
+  supabaseUrlRaw = supabaseUrlRaw.replace(/\/+$/, "");
+}
+const supabaseUrl = supabaseUrlRaw;
+const supabaseKey = (process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+const isSupabaseConfigured = !!(supabaseUrl && supabaseKey);
+
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false
+      }
+    })
+  : null;
+
+if (isSupabaseConfigured) {
+  console.log("Supabase Client initialized successfully!");
+} else {
+  console.log("Supabase URL or Key not found in environment. Falling back to local database.json storage.");
+}
+
+// Helper to load/save raw local data
+function loadLocal(): DatabaseSchema {
+  try {
+    if (!fs.existsSync(DB_FILE)) {
+      saveLocal(INITIAL_DATA);
+      return INITIAL_DATA;
+    }
+    const raw = fs.readFileSync(DB_FILE, "utf-8");
+    const parsed = JSON.parse(raw);
+    if (!parsed.projects) parsed.projects = INITIAL_DATA.projects;
+    if (!parsed.skills) parsed.skills = INITIAL_DATA.skills;
+    if (!parsed.certifications) parsed.certifications = INITIAL_DATA.certifications;
+    if (!parsed.messages) parsed.messages = INITIAL_DATA.messages;
+    if (!parsed.profile) parsed.profile = INITIAL_DATA.profile || { photoUrl: "", resumeUrl: "" };
+    return parsed;
+  } catch (e) {
+    console.error("Database parsing failed, falling back to INITIAL_DATA:", e);
+    return INITIAL_DATA;
+  }
+}
+
+function saveLocal(data: DatabaseSchema): void {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch (e) {
+    console.error("Database save failed:", e);
+  }
+}
+
+// Generic helpers to load and save keys either from Supabase or local
+async function loadKey<T>(key: string, defaultValue: T): Promise<T> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("portfolio_store")
+        .select("value")
+        .eq("key", key)
+        .maybeSingle();
+
+      if (error) {
+        console.error(`Supabase load error for key "${key}":`, error.message);
+      } else if (data && data.value !== undefined) {
+        return data.value as T;
+      } else {
+        // Row not found in Supabase. Let's check local database.json first to migrate!
+        const localDb = loadLocal();
+        const localValue = (localDb as any)[key];
+        const valToSeed = localValue !== undefined ? localValue : defaultValue;
+        await saveKey(key, valToSeed);
+        return valToSeed;
+      }
+    } catch (e) {
+      console.error(`Supabase connection failed for key "${key}", falling back to local database.json:`, e);
+    }
+  }
+
+  const localDb = loadLocal();
+  const val = (localDb as any)[key];
+  return val !== undefined ? val : defaultValue;
+}
+
+async function saveKey<T>(key: string, value: T): Promise<void> {
+  if (supabase) {
+    try {
+      const { error } = await supabase
+        .from("portfolio_store")
+        .upsert({ key, value }, { onConflict: "key" });
+
+      if (error) {
+        console.error(`Supabase save error for key "${key}":`, error.message);
+      } else {
+        // Redundant local backup
+        try {
+          const localDb = loadLocal();
+          (localDb as any)[key] = value;
+          saveLocal(localDb);
+        } catch (e) {}
+        return;
+      }
+    } catch (e) {
+      console.error(`Supabase save failed for key "${key}":`, e);
+    }
+  }
+
+  const localDb = loadLocal();
+  (localDb as any)[key] = value;
+  saveLocal(localDb);
+}
 
 // High-fidelity pre-populated data matching Raviraj Chauhan's real resume/portfolio
 const INITIAL_DATA: DatabaseSchema = {
@@ -213,111 +347,80 @@ const INITIAL_DATA: DatabaseSchema = {
 };
 
 export class JSONDatabase {
-  private static load(): DatabaseSchema {
-    try {
-      if (!fs.existsSync(DB_FILE)) {
-        this.save(INITIAL_DATA);
-        return INITIAL_DATA;
-      }
-      const raw = fs.readFileSync(DB_FILE, "utf-8");
-      const parsed = JSON.parse(raw);
-      // Migrate existing schemas if necessary to add default properties
-      if (!parsed.projects) parsed.projects = INITIAL_DATA.projects;
-      if (!parsed.skills) parsed.skills = INITIAL_DATA.skills;
-      if (!parsed.certifications) parsed.certifications = INITIAL_DATA.certifications;
-      if (!parsed.messages) parsed.messages = INITIAL_DATA.messages;
-      if (!parsed.profile) parsed.profile = INITIAL_DATA.profile || { photoUrl: "", resumeUrl: "" };
-      return parsed;
-    } catch (e) {
-      console.error("Database parsing failed, falling back to INITIAL_DATA:", e);
-      return INITIAL_DATA;
-    }
-  }
-
-  private static save(data: DatabaseSchema): void {
-    try {
-      fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf-8");
-    } catch (e) {
-      console.error("Database save failed:", e);
-    }
-  }
-
   // Projects CRUD
-  public static getProjects(): Project[] {
-    return this.load().projects;
+  public static async getProjects(): Promise<Project[]> {
+    return loadKey<Project[]>("projects", INITIAL_DATA.projects);
   }
 
-  public static addProject(project: Project): Project {
-    const db = this.load();
-    db.projects.push(project);
-    this.save(db);
+  public static async addProject(project: Project): Promise<Project> {
+    const list = await this.getProjects();
+    list.push(project);
+    await saveKey("projects", list);
     return project;
   }
 
-  public static updateProject(id: string, updated: Partial<Project>): Project | null {
-    const db = this.load();
-    const idx = db.projects.findIndex((p) => p.id === id);
+  public static async updateProject(id: string, updated: Partial<Project>): Promise<Project | null> {
+    const list = await this.getProjects();
+    const idx = list.findIndex((p) => p.id === id);
     if (idx === -1) return null;
-    db.projects[idx] = { ...db.projects[idx], ...updated };
-    this.save(db);
-    return db.projects[idx];
+    list[idx] = { ...list[idx], ...updated };
+    await saveKey("projects", list);
+    return list[idx];
   }
 
-  public static deleteProject(id: string): boolean {
-    const db = this.load();
-    const initialLen = db.projects.length;
-    db.projects = db.projects.filter((p) => p.id !== id);
-    this.save(db);
-    return db.projects.length < initialLen;
+  public static async deleteProject(id: string): Promise<boolean> {
+    const list = await this.getProjects();
+    const initialLen = list.length;
+    const filtered = list.filter((p) => p.id !== id);
+    await saveKey("projects", filtered);
+    return filtered.length < initialLen;
   }
 
   // Skills CRUD
-  public static getSkills(): SkillCategory[] {
-    return this.load().skills;
+  public static async getSkills(): Promise<SkillCategory[]> {
+    return loadKey<SkillCategory[]>("skills", INITIAL_DATA.skills);
   }
 
-  public static setSkills(skills: SkillCategory[]): void {
-    const db = this.load();
-    db.skills = skills;
-    this.save(db);
+  public static async setSkills(skills: SkillCategory[]): Promise<void> {
+    await saveKey("skills", skills);
   }
 
   // Certifications CRUD
-  public static getCertifications(): CertificationItem[] {
-    return this.load().certifications;
+  public static async getCertifications(): Promise<CertificationItem[]> {
+    return loadKey<CertificationItem[]>("certifications", INITIAL_DATA.certifications);
   }
 
-  public static addCertification(cert: CertificationItem): CertificationItem {
-    const db = this.load();
-    db.certifications.push(cert);
-    this.save(db);
+  public static async addCertification(cert: CertificationItem): Promise<CertificationItem> {
+    const list = await this.getCertifications();
+    list.push(cert);
+    await saveKey("certifications", list);
     return cert;
   }
 
-  public static deleteCertification(id: string): boolean {
-    const db = this.load();
-    const initialLen = db.certifications.length;
-    db.certifications = db.certifications.filter((c) => c.id !== id);
-    this.save(db);
-    return db.certifications.length < initialLen;
+  public static async deleteCertification(id: string): Promise<boolean> {
+    const list = await this.getCertifications();
+    const initialLen = list.length;
+    const filtered = list.filter((c) => c.id !== id);
+    await saveKey("certifications", filtered);
+    return filtered.length < initialLen;
   }
 
-  public static updateCertification(id: string, updated: Partial<CertificationItem>): CertificationItem | null {
-    const db = this.load();
-    const idx = db.certifications.findIndex((c) => c.id === id);
+  public static async updateCertification(id: string, updated: Partial<CertificationItem>): Promise<CertificationItem | null> {
+    const list = await this.getCertifications();
+    const idx = list.findIndex((c) => c.id === id);
     if (idx === -1) return null;
-    db.certifications[idx] = { ...db.certifications[idx], ...updated };
-    this.save(db);
-    return db.certifications[idx];
+    list[idx] = { ...list[idx], ...updated };
+    await saveKey("certifications", list);
+    return list[idx];
   }
 
   // Contact Messages CRUD
-  public static getMessages(): ContactMessage[] {
-    return this.load().messages;
+  public static async getMessages(): Promise<ContactMessage[]> {
+    return loadKey<ContactMessage[]>("messages", INITIAL_DATA.messages);
   }
 
-  public static addMessage(msg: Omit<ContactMessage, "id" | "timestamp" | "read">): ContactMessage {
-    const db = this.load();
+  public static async addMessage(msg: Omit<ContactMessage, "id" | "timestamp" | "read">): Promise<ContactMessage> {
+    const list = await this.getMessages();
     const newMsg: ContactMessage = {
       ...msg,
       id: "msg_" + Math.random().toString(36).substr(2, 9),
@@ -325,32 +428,32 @@ export class JSONDatabase {
       read: false,
       replies: []
     };
-    db.messages.unshift(newMsg); // most recent first
-    this.save(db);
+    list.unshift(newMsg); // most recent first
+    await saveKey("messages", list);
     return newMsg;
   }
 
-  public static markMessageRead(id: string): boolean {
-    const db = this.load();
-    const idx = db.messages.findIndex((m) => m.id === id);
+  public static async markMessageRead(id: string): Promise<boolean> {
+    const list = await this.getMessages();
+    const idx = list.findIndex((m) => m.id === id);
     if (idx === -1) return false;
-    db.messages[idx].read = true;
-    this.save(db);
+    list[idx].read = true;
+    await saveKey("messages", list);
     return true;
   }
 
-  public static deleteMessage(id: string): boolean {
-    const db = this.load();
-    const initialLen = db.messages.length;
-    db.messages = db.messages.filter((m) => m.id !== id);
-    this.save(db);
-    return db.messages.length < initialLen;
+  public static async deleteMessage(id: string): Promise<boolean> {
+    const list = await this.getMessages();
+    const initialLen = list.length;
+    const filtered = list.filter((m) => m.id !== id);
+    await saveKey("messages", filtered);
+    return filtered.length < initialLen;
   }
 
   // Message Replies CRUD
-  public static addMessageReply(messageId: string, replyMessage: string): MessageReply | null {
-    const db = this.load();
-    const idx = db.messages.findIndex((m) => m.id === messageId);
+  public static async addMessageReply(messageId: string, replyMessage: string): Promise<MessageReply | null> {
+    const list = await this.getMessages();
+    const idx = list.findIndex((m) => m.id === messageId);
     if (idx === -1) return null;
     
     const reply: MessageReply = {
@@ -359,30 +462,67 @@ export class JSONDatabase {
       timestamp: new Date().toISOString()
     };
     
-    if (!db.messages[idx].replies) {
-      db.messages[idx].replies = [];
+    if (!list[idx].replies) {
+      list[idx].replies = [];
     }
-    db.messages[idx].replies!.push(reply);
-    db.messages[idx].read = true; // Auto-mark read when we reply!
+    list[idx].replies!.push(reply);
+    list[idx].read = true; // Auto-mark read when we reply!
     
-    this.save(db);
+    await saveKey("messages", list);
     return reply;
   }
 
   // Profile CRUD
-  public static getProfile(): Profile {
-    const db = this.load();
-    if (!db.profile) {
-      db.profile = { photoUrl: "", resumeUrl: "" };
-      this.save(db);
-    }
-    return db.profile;
+  public static async getProfile(): Promise<Profile> {
+    const profileDefault = INITIAL_DATA.profile || { photoUrl: "", resumeUrl: "" };
+    return loadKey<Profile>("profile", profileDefault);
   }
 
-  public static updateProfile(updated: Partial<Profile>): Profile {
-    const db = this.load();
-    db.profile = { ...(db.profile || { photoUrl: "", resumeUrl: "" }), ...updated };
-    this.save(db);
-    return db.profile;
+  public static async updateProfile(updated: Partial<Profile>): Promise<Profile> {
+    const current = await this.getProfile();
+    const merged = { ...current, ...updated };
+    await saveKey("profile", merged);
+    return merged;
+  }
+
+  // File Upload CRUD
+  public static async getUpload(filename: string): Promise<{ contentType: string, base64Data: string } | null> {
+    if (supabase) {
+      try {
+        const { data, error } = await supabase
+          .from("portfolio_uploads")
+          .select("content_type, base64_data")
+          .eq("filename", filename)
+          .maybeSingle();
+
+        if (error) {
+          console.error(`Supabase load file error for filename "${filename}":`, error.message);
+        } else if (data) {
+          return {
+            contentType: data.content_type,
+            base64Data: data.base64_data
+          };
+        }
+      } catch (e) {
+        console.error(`Supabase connection failed for filename "${filename}":`, e);
+      }
+    }
+    return null;
+  }
+
+  public static async saveUpload(filename: string, contentType: string, base64Data: string): Promise<void> {
+    if (supabase) {
+      try {
+        const { error } = await supabase
+          .from("portfolio_uploads")
+          .upsert({ filename, content_type: contentType, base64_data: base64Data }, { onConflict: "filename" });
+
+        if (error) {
+          console.error(`Supabase save file error for filename "${filename}":`, error.message);
+        }
+      } catch (e) {
+        console.error(`Supabase save file failed for filename "${filename}":`, e);
+      }
+    }
   }
 }

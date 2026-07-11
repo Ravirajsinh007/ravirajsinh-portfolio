@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { PROJECTS } from "../data";
 import { Project } from "../types";
 import { ExternalLink, Github, X, CheckCircle, Sparkles, FolderKanban, Heart, MessageCircle, Share2, Bookmark, BadgeCheck, MoreHorizontal, ArrowUpRight, ChevronLeft, ChevronRight, Layers3 } from "lucide-react";
+import { getApiUrl } from "../lib/api";
 
 // Premium high-resolution dark-themed aesthetic images mapped by project ID
 const PROJECT_IMAGES: Record<string, string> = {
@@ -18,7 +19,7 @@ export default function Projects() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/projects")
+    fetch(getApiUrl("/api/projects"))
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch");
         return res.json();
@@ -205,7 +206,8 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
     setBookmarked(!bookmarked);
   };
 
-  const projectImage = project.imageUrl || PROJECT_IMAGES[project.id] || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop";
+  const rawImage = project.imageUrl || PROJECT_IMAGES[project.id] || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop";
+  const projectImage = rawImage.startsWith("/") ? getApiUrl(rawImage) : rawImage;
 
   return (
     <div
@@ -314,7 +316,8 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
 
 /* Glassmorphic detailed project expander Modal with responsive split layout (Left: Mockup, Right: Specifications) */
 function ProjectModal({ project, onClose }: { project: Project; onClose: () => void }) {
-  const projectImage = project.imageUrl || PROJECT_IMAGES[project.id] || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop";
+  const rawImage = project.imageUrl || PROJECT_IMAGES[project.id] || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop";
+  const projectImage = rawImage.startsWith("/") ? getApiUrl(rawImage) : rawImage;
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(Math.floor(Math.random() * 40) + 140);
 

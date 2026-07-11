@@ -13,8 +13,8 @@ export const RESUME_DATA = {
   phone: "+91 7984887716",
   email: "ravirajchauhan219@gmail.com",
   socials: {
-    github: "https://github.com/raviraj-chauhan", // Realistic default
-    linkedin: "https://linkedin.com/in/raviraj-chauhan" // Realistic default
+    github: "https://github.com/Ravirajsinh007", // Realistic default
+    linkedin: "https://www.linkedin.com/in/ravirajsinh-chauhan-199912245/" // Realistic default
   }
 };
 
@@ -165,13 +165,13 @@ export const ACHIEVEMENTS: AchievementItem[] = [
     year: "2025"
   },
   {
-    title: "CODEMANTHAN 1.0 Hackathon Winner",
+    title: "CODEMANTHAN 1.0 Hackathon",
     issuer: "CVMU Tech Fest",
     description: "Designed, coded, and demonstrated an innovative solution under rigorous competitive constraints and judging panels, showcasing rapid application development.",
     year: "2024"
   },
   {
-    title: "Highest CGPA Honor",
+    title: "Consistent CGPA Honor",
     issuer: "BCA Department",
     description: "Maintained a near-perfect 9.68 CGPA throughout the three years of undergraduate coursework, ranking near the absolute top of the university cohort.",
     year: "2025"

@@ -21,6 +21,7 @@ import {
   Terminal as TermIcon,
   Braces
 } from "lucide-react";
+import { getApiUrl } from "../lib/api";
 
 // Helper to determine skill type dynamically for robust filtering
 const getSkillType = (skillName: string, categoryName: string): "frontend" | "backend" | "tools" => {
@@ -79,7 +80,7 @@ export default function Skills() {
   const [activeTab, setActiveTab] = useState<"all" | "frontend" | "backend" | "tools">("all");
 
   useEffect(() => {
-    fetch("/api/skills")
+    fetch(getApiUrl("/api/skills"))
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch");
         return res.json();

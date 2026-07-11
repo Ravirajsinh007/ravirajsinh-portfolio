@@ -92,7 +92,7 @@ Name: Raviraj Chauhan
 Location: Botad, Gujarat, India
 Phone: +91 7984887716
 Email: ravirajchauhan219@gmail.com
-Profiles: LinkedIn (https://linkedin.com), GitHub (https://github.com)
+Profiles: LinkedIn (https://www.linkedin.com/in/ravirajsinh-chauhan-199912245/), GitHub (https://github.com/Ravirajsinh007)
 
 Summary:
 MCA student at CHARUSAT with hands-on experience in full-stack web development using Django, Angular, and SQL databases. Developed EduTrack, a role-based learning management platform featuring authentication, REST APIs, assignment tracking, and student progress monitoring. Strong foundation in software development, database design, and problem solving.
@@ -218,12 +218,12 @@ async function startServer() {
       res.setHeader("Access-Control-Allow-Origin", "*");
     }
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
     res.setHeader("Access-Control-Allow-Credentials", "true");
 
     // Handle Preflight OPTIONS requests
     if (req.method === "OPTIONS") {
-      res.sendStatus(204);
+      res.sendStatus(200);
       return;
     }
     next();
